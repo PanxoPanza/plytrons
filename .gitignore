@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+
+# Metadata de paquetes
+*.egg-info/
+.eggs/
+
+# Entornos y caches
+.venv/
+venv/
+.env
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Build / dist
+build/
+dist/
