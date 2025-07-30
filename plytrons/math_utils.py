@@ -392,4 +392,4 @@ def em_sph_harm(m, l, theta, phi):
     assert mp <= l , 'm cannot not be greater than l'
     assert l >= 0,   'l cannot not be negative'
     
-    return (-1)**m*qm_sph_harm(m, l, theta, phi)
+    return qm_sph_harm(m, l, theta, phi)

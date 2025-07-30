@@ -195,8 +195,6 @@ class BCMObject:
 
         return coef_q
 
-        
-
 @nb.njit
 def BCM_basis_sphere(R, l, m, theta, phi):
     """
@@ -476,7 +474,7 @@ def _prepare_grid(n_theta: int = 150, n_phi: int = 30):
     """Build and cache the (θ,φ) mesh plus helpers."""
     θ = np.linspace(0, np.pi,  n_theta)
     φ = np.linspace(0, 2*np.pi, n_phi)
-    tt, pp = np.meshgrid(θ, φ, indexing="ij")        # shape (nθ, nφ)
+    tt, pp = np.meshgrid(θ, φ)        # shape (nθ, nφ)
 
     sinθ   = np.sin(tt)
     n_hat  = np.stack((sinθ*np.cos(pp),               # x
@@ -488,7 +486,7 @@ def Ecoupling_matrix(lmax: int, Ri: float, e_hat: np.ndarray,
                      n_theta: int = 150, n_phi: int = 30) -> np.ndarray:
     """
     Vectorised replacement for Ecoupling_coef.
-    Returns Xi for *all* (ℓ,m) with 1 ≤ ℓ ≤ lmax, -ℓ ≤ m ≤ ℓ.
+    Returns Xi for *all* (l,m) with 1 ≤ l ≤ lmax, -l ≤ m ≤ l.
     """
     θ, φ, tt, pp, sinθ, n_hat = _prepare_grid(n_theta, n_phi)
 
@@ -497,34 +495,46 @@ def Ecoupling_matrix(lmax: int, Ri: float, e_hat: np.ndarray,
               n_hat[1]*e_hat[1] +
               n_hat[2]*e_hat[2])                      # shape (nθ,nφ)
 
-    # --- build flattened arrays of ℓ and m ---
+    # --- build flattened arrays of l and m ---
     li, mi = [], []
-    for ℓ in range(1, lmax+1):
-        li.extend([ℓ]*(2*ℓ+1))
-        mi.extend(range(-ℓ, ℓ+1))
+    for l in range(1, lmax+1):
+        li.extend([l]*(2*l+1))     # repeats l, (2*l+1) times
+        mi.extend(range(-l, l+1))
     li = np.asarray(li)
     mi = np.asarray(mi)
 
-    # Broadcast (ℓ,m) over the grid → Ylm shape (modes,nθ,nφ)
+    # Broadcast (l,m) over the grid → Ylm shape (modes,nθ,nφ)
     Ylm = em_sph_harm(mi[:, None, None], li[:, None, None], tt, pp)
 
     # Integrand:  conj(Ylm) * (n·e)                       (broadcasted)
     integrand = np.conj(Ylm) * ne_dot[None, :, :]
-
-    # Simple rectangular rule (same as trapz2 for uniform spacing)
+    
+    #  --- 2d trapezoidal rule (same as trapz2)  --- 
     dθ  = θ[1] - θ[0]
     dφ  = φ[1] - φ[0]
-    Xi  = np.tensordot(integrand * sinθ,               # shape (modes,nθ,nφ)
-                       np.ones_like(ne_dot),           # integrate over grid
+
+    # Create 1D trapezoidal weights for x and y
+    wθ = np.ones_like(θ)
+    wθ[0] = wθ[-1] = 0.5
+    wφ = np.ones_like(φ)
+    wφ[0] = wφ[-1] = 0.5
+
+    # Create 2D weights by outer product
+    W = np.outer(wφ, wθ)
+    
+    # Perform the double integral using the trapezoidal rule
+    # Xi = ∫∫ integrand * sin(θ) dθ dφ
+    Xi  = np.tensordot(integrand * sinθ[None, :, :],   # shape (modes,nθ,nφ)
+                       W,                              # weights shape (nφ,nθ)
                        axes=([1,2],[0,1])) * dθ * dφ
 
-    # Final radial prefactor √(ℓ / R³)
+    #  ---  Final radial prefactor √(l / R³)  --- 
     Xi *= np.sqrt(li / Ri**3)
     return Xi
 
 def Efield_coupling(obj_i: BCMObject, Efield: EField,
                     n_theta: int = 150, n_phi: int = 30) -> np.ndarray:
-    """Vectorised – no inner (ℓ,m) loops."""
+    """Vectorised – no inner (l,m) loops."""
     eps0 = 0.055263493756           # vacuum permittivity (e / V·nm)
     Ri   = obj_i.diameter / 2
     Xi   = Ecoupling_matrix(obj_i.lmax, Ri, Efield.e_hat,
