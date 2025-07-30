@@ -18,6 +18,8 @@ setup(
     install_requires=[
         'numpy',
         'numba',
+        'scipy',
+        'dataclasses',
     ],
     extras_require={
         'dev': ['pytest'],

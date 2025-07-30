@@ -28,7 +28,7 @@ from typing import Callable, Optional
 # -------------------------------------------------------------------------
 # Dataclasses that describe the light source and each sphere
 # -------------------------------------------------------------------------
-@dataclass(slots=True)
+@dataclass
 class EField:
     """
     Plane-wave electric field.
