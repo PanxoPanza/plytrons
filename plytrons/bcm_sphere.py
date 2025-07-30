@@ -23,7 +23,7 @@ from plytrons.wigner3j import clebsch_gordan
 from plytrons.math_utils import em_sph_harm
 from dataclasses import dataclass, field
 from functools   import cached_property
-from typing import Callable, Optional
+from typing import Callable, Optional, Union
 
 # -------------------------------------------------------------------------
 # Dataclasses that describe the light source and each sphere
@@ -111,11 +111,11 @@ class BCMObject:
     # Read-only *properties*  (no setter → external code can’t modify)
     # ----------------------------------------------------------------
     @property
-    def BCM_coef(self) -> np.ndarray | None:
+    def BCM_coef(self) -> Union[np.ndarray, None]:
         return self._coef
 
     @property
-    def lam_um(self) -> np.ndarray | None:
+    def lam_um(self) -> Union[np.ndarray, None]:
         return self._lam_um
 
     # ----------------------------------------------------------------
