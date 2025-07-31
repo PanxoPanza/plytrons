@@ -142,7 +142,7 @@ class BCMObject:
 
         # All good – assign to the *private* slots
         self._coef   = coef.astype(np.complex128, copy=False)
-        self._lam_um = lam_um.astype(np.float64,      copy=False)
+        self._lam_um = lam_um.astype(np.float64,  copy=False)
 
     # ------------------------------------------------------------------
     # Helper: get expansion coefficients at arbitrary λ by interpolation

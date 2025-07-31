@@ -99,10 +99,10 @@ def _transition_M(
             continue
 
         X_abs = abs(X_lm[idx])
-        if X_abs <= 1e-10:
+        if X_abs <= 1e-05:
             continue
 
-        pref = (1.0/eps0)*np.sqrt(le/a_nm**3)*X_abs/(2*le + 1)
+        pref = (1.0/eps0)*np.sqrt(le/a_nm**3)*X_lm[idx]/(2*le + 1)
         scale = pref / a_nm**(le - 1)
         
         # Integration along solid angle
@@ -134,7 +134,7 @@ def _hot_e_dist_parallel(
 ) -> Tuple[np.ndarray, np.ndarray]:
 
     volume_nm3 = (4.0 / 3.0) * np.pi * a_nm ** 3
-    gamma_e = hbar / (tau_e_fs * 1e-3)  # eV
+    gamma_e = hbar / (tau_e_fs * 1e3)  # eV
 
     # --- flatten bound levels ---------------------------------------------
     lmax = len(e_state)
