@@ -33,7 +33,7 @@ import datetime as dt
 hbar = 0.6582118      # Reduced planck constant (eV*fs)
 me   = 5.686          # electron mass (eV*fs^2/nm^2)
 eps0 = 0.055263493756 # vacuum permittivity (e/V nm)
-e    = 1          # electron charge (eV) --- NOT SURE OF THIS
+e    = 1              # electron charge (eV) --- NOT SURE OF THIS
 
 @nb.njit(parallel=False)
 def nb_meshgrid(x, y):
@@ -188,7 +188,7 @@ class Legendre_poly:
             
         self.f1, self.f2, self.sqr = f1, f2, sqr
 
-    def Plm(self, lmax, mi, z, csphase=1, cnorm=1):
+    def Plm(self, lmax, mi, z, csphase=-1, cnorm=1):
         """
         Normalized associated Legendre functions up to degree lmax. The functions are 
         initially scaled by 10^280 sin^m in order to minimize the effects of underflow 
@@ -391,10 +391,5 @@ def em_sph_harm(m, l, theta, phi):
     mp = abs(m)
     assert mp <= l , 'm cannot not be greater than l'
     assert l >= 0,   'l cannot not be negative'
-
-    # y_ml = (-1)**(-mp)*qm_sph_harm(mp, l, theta, phi)
-
-    # if m < 0:
-    #     y_ml = (-1)**mp*np.conj(y_ml)
     
-    return (-1)**(-m)*qm_sph_harm(m, l, theta, phi)
+    return (-1)**(m)*qm_sph_harm(m, l, theta, phi)
