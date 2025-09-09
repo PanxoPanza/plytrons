@@ -25,6 +25,7 @@ References:
 
 import numpy as np
 from scipy.special import jv, kv
+from scipy.signal import find_peaks
 import numba as nb
 from numba.experimental import jitclass
 import logging
@@ -398,3 +399,44 @@ def em_sph_harm(m, l, theta, phi):
     #     y_ml = (-1)**mp*np.conj(y_ml)
     
     return (-1)**(-m)*qm_sph_harm(m, l, theta, phi)
+
+def detect_peaks(x_data, y_data, prominence=0.1, width=None, height=None,print_data=True):
+    """
+    Detect peaks in the data and return their x and y values.
+    
+    Parameters:
+    -----------
+    x_data : array-like
+        The x-coordinates of the data
+    y_data : array-like
+        The y-coordinates of the data
+    prominence : float, optional
+        The prominence threshold for peak detection
+    width : float, optional
+        The width threshold for peak detection
+    height : float, optional
+        The height threshold for peak detection
+    plot_result : bool, optional
+        Whether to plot the result with the detected peaks
+        
+    Returns:
+    --------
+    peak_x : array
+        The x-coordinates of the detected peaks
+    peak_y : array
+        The y-coordinates of the detected peaks
+    """
+    # Find peaks using scipy's find_peaks function
+    peaks, properties = find_peaks(y_data, prominence=prominence, width=width, height=height)
+    
+    # Get x and y values of the peaks
+    peak_x = x_data[peaks]
+    peak_y = y_data[peaks]
+
+    if print_data:    
+        # Print the detected peaks
+        print("Detected peaks:")
+        for i in range(len(peak_x)):
+            print(f"Peak {i+1}: x = {peak_x[i]:.3f} eV, y = {peak_y[i]:.3f} (10^-2)/eV/(ps·nm²)")
+    
+    return peak_x, peak_y
