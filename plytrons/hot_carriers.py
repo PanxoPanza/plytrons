@@ -112,17 +112,10 @@ def _M_transition_squared(
     Ai2 = (Ai * Ai.conj()).real
     AA_abs2 = Af2[:, None] * Ai2[None, :]
 
-<<<<<<< HEAD
-    # Radial grid constant for every multipole
-    r = np.linspace(0.00001, a_nm, 128)
-    rr, EEi = nb_meshgrid(r, Ei)
-    js_li = js_real(li, ke(EEi) * rr)       # shape (N_r, n_i)
-=======
     # ----- radial grid & Bessels -------------------------------------------
     Nr = 128
     r = np.linspace(0.0, a_nm, Nr)      # (Nr,)
     rr = r[:, None]                          # (Nr, 1) for broadcasting
->>>>>>> e37bdc785d1869a203fddf72a047226f91297efc
 
     # Bessel columns: A=(Nr,n_f), B=(Nr,n_i)
     j_lf = js_real(lf, ke(Ef[None, :]) * rr)       # j_lf(k_f r)
@@ -151,28 +144,6 @@ def _M_transition_squared(
         if ((lf + le + li) & 1) == 1:
             continue
 
-<<<<<<< HEAD
-        pref = (1.0/eps0)*np.sqrt(le/a_nm**3)*X_lm[idx]/(2*le + 1)
-        scale = pref / a_nm**(le - 1)
-        
-        # Integration along solid angle
-        Mfi_ang = gaunt_coeff(lf, le, li, -mf, mel, mi) * ((-1) ** (mf-mel))
-
-        Mfi_rad = np.zeros_like(Mfi)
-        # Radial integral for every Ef row (serial loop)
-        for k in range(n_f):
-            
-            # Perform integration inside the sphere (r < a)
-            rho = np.conj(js_real(lf, ke(Ef[k]) * rr)) * js_li   # (N_r, n_i)
-            integ = np.ascontiguousarray((rho*rr**(le + 2)).astype(np.complex128))
-            int_axis = np.ascontiguousarray(r.astype(np.float64))          # debe tener len == y.shape[-1]           
-            Mfi_rad[k, :] = np.trapz(integ, int_axis)
-
-        Mfi += scale*AAf.conj() * AAi * Mfi_ang*Mfi_rad
-        
-        # print( AAf.conj() * AAi, np.abs(Mfi_ang)**2, np.abs(Mfi_rad)**2)
-    return Mfi
-=======
        # ---------- Integration along solid angle ---------------------
         # power in field multipole le: P_le = sum_m |X_{le m}|^2
         idx0 = lm_to_idx(le, -le)
@@ -213,7 +184,6 @@ def _M_transition_squared(
 
     # include |Af*Ai|^2
     return Mfi_2 * AA_abs2
->>>>>>> e37bdc785d1869a203fddf72a047226f91297efc
 
 @nb.njit(fastmath=False, parallel = False)
 def _M_transition_squared(
@@ -327,22 +297,12 @@ def _hot_e_dist_parallel(
     a_nm: float,
     hv_eV: float,
     E_F: float,
-<<<<<<< HEAD
     tau_e: np.ndarray,
-=======
-    tau_e_ps: float,
->>>>>>> e37bdc785d1869a203fddf72a047226f91297efc
     e_state: List[QWLevelSet],
     X_lm: np.ndarray,
     Pabs: float
 ) -> Tuple[np.ndarray, np.ndarray]:
 
-<<<<<<< HEAD
-=======
-    volume_nm3 = (4.0 / 3.0) * np.pi * a_nm ** 3
-    gamma_e = hbar / (tau_e_ps*1e3)  # eV
-
->>>>>>> e37bdc785d1869a203fddf72a047226f91297efc
     # --- flatten bound levels ---------------------------------------------
     lmax = len(e_state)
     l_range = np.zeros(lmax + 1, dtype=np.int64)
@@ -356,11 +316,7 @@ def _hot_e_dist_parallel(
 
     # global transition matrices
     Mfi_2_all = np.zeros((N, N), dtype=np.float64)
-<<<<<<< HEAD
     # Mif_2_all = np.zeros_like(Mfi_2_all)
-=======
-    Mif_2_all = np.zeros_like(Mfi_2_all)
->>>>>>> e37bdc785d1869a203fddf72a047226f91297efc
 
     # outer parallelism over final l index ----------------------------------
     for lf in prange(lmax):
@@ -372,30 +328,17 @@ def _hot_e_dist_parallel(
 
             # Compute transition matrix for pair (lf, li)
             Mfi_2_block = _M_transition_squared(lf, li, a_nm, X_lm, state_lf, state_li)
-<<<<<<< HEAD
             # Mif_2_block = _M_transition_squared(li, lf, a_nm, X_lm, state_li, state_lf)
 
             # place blocks into global matrices
             Mfi_2_all[lf_s:lf_e, li_s:li_e] = Mfi_2_block
             # Mif_2_all[li_s:li_e, lf_s:lf_e] = Mif_2_block
-=======
-            Mif_2_block = _M_transition_squared(li, lf, a_nm, X_lm, state_li, state_lf)
-            
-            # *** Average over initial m_i ***
-            Mfi_2_block /= (2.0 * li + 1.0)  # initial shell is li
-            Mif_2_block /= (2.0 * lf + 1.0)  # initial shell is lf for the reversed block
-
-            # place blocks into global matrices
-            Mfi_2_all[lf_s:lf_e, li_s:li_e] = Mfi_2_block
-            Mif_2_all[li_s:li_e, lf_s:lf_e] = Mif_2_block
->>>>>>> e37bdc785d1869a203fddf72a047226f91297efc
 
 # --- Golden‑rule probability matrices ----------------------------------
     EE_i, EE_f = nb_meshgrid(E_all, E_all)
     fd_i = _fermi_dirac(EE_i, E_F)
     fd_f = _fermi_dirac(EE_f, E_F)
 
-<<<<<<< HEAD
     Te = np.zeros((len(tau_e), N), dtype=np.float64)
     Th = np.zeros((len(tau_e), N), dtype=np.float64)
 
@@ -427,16 +370,6 @@ def _hot_e_dist_parallel(
         
         Te[i] = S * Te_raw/Vol
         Th[i] = S * Th_raw/Vol
-=======
-    denom_e = (hv_eV - EE_f + EE_i)**2 + gamma_e**2
-    denom_h = (hv_eV - EE_i + EE_f)**2 + gamma_e**2
-
-    TTe = 4.0/tau_e_ps * fd_i * (1.0 - fd_f) * \
-        (Mfi_2_all/denom_e + Mif_2_all.T/denom_h)
-    
-    TTh = 4.0/tau_e_ps * fd_f * (1.0 - fd_i) * \
-    (Mif_2_all/denom_h + Mfi_2_all.T/denom_e)
->>>>>>> e37bdc785d1869a203fddf72a047226f91297efc
 
     return Te, Th
 

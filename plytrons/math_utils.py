@@ -393,7 +393,6 @@ def em_sph_harm(m, l, theta, phi):
     assert mp <= l , 'm cannot not be greater than l'
     assert l >= 0,   'l cannot not be negative'
     
-<<<<<<< HEAD
     return (-1)**(-m)*qm_sph_harm(m, l, theta, phi)
 
 def detect_peaks(x_data, y_data, prominence=0.1, width=None, height=None,print_data=True):
@@ -436,6 +435,3 @@ def detect_peaks(x_data, y_data, prominence=0.1, width=None, height=None,print_d
             print(f"Peak {i+1}: x = {peak_x[i]:.3f} eV, y = {peak_y[i]:.3f} (10^-2)/eV/(ps·nm²)")
     
     return peak_x, peak_y
-=======
-    return (-1)**(m)*qm_sph_harm(m, l, theta, phi)
->>>>>>> e37bdc785d1869a203fddf72a047226f91297efc
