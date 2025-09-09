@@ -89,9 +89,9 @@ def lm_to_idx(l: int, m: int) -> int:
 # -----------------------------------------------------------------------------
 
 @nb.njit(fastmath=True, parallel = False)
-def _transition_M(
-    sf: Tuple[int, int],
-    si: Tuple[int, int],
+def _M_transition_squared(
+    lf: int,
+    li: int,
     a_nm: float,
     X_lm: np.ndarray,     # complex128[:]
     state_f: QWLevelSet,
@@ -101,37 +101,57 @@ def _transition_M(
     
     # get parameters of final state
     Ef, Af = state_f.Eb.real.astype(np.float64), state_f.A
-    lf, mf = sf
     n_f = Ef.size
 
     # get parameters of initial state
     Ei, Ai = state_i.Eb.real.astype(np.float64), state_i.A
-    li, mi = si
     n_i = Ei.size
 
-    # Pre‑compute meshgrids that depend only on radial indices
-    AAi, AAf = nb_meshgrid(Ai, Af)          # shapes (n_i, n_f) & (n_f, n_i)
-    Mfi = np.zeros((n_f, n_i), dtype=np.complex128)
+    # |Af*Ai|^2 as an outer product -> (n_f, n_i)
+    Af2 = (Af * Af.conj()).real
+    Ai2 = (Ai * Ai.conj()).real
+    AA_abs2 = Af2[:, None] * Ai2[None, :]
 
+<<<<<<< HEAD
     # Radial grid constant for every multipole
     r = np.linspace(0.00001, a_nm, 128)
     rr, EEi = nb_meshgrid(r, Ei)
     js_li = js_real(li, ke(EEi) * rr)       # shape (N_r, n_i)
+=======
+    # ----- radial grid & Bessels -------------------------------------------
+    Nr = 128
+    r = np.linspace(0.0, a_nm, Nr)      # (Nr,)
+    rr = r[:, None]                          # (Nr, 1) for broadcasting
+>>>>>>> e37bdc785d1869a203fddf72a047226f91297efc
 
-    # Scan electromagnetic multipoles
-    for idx in range(X_lm.size):
-        le, mel = idx_to_lm(idx)
+    # Bessel columns: A=(Nr,n_f), B=(Nr,n_i)
+    j_lf = js_real(lf, ke(Ef[None, :]) * rr)       # j_lf(k_f r)
+    j_li = js_real(li, ke(Ei[None, :]) * rr)       # j_li(k_i r)
 
-        # Wigner‑3j selection rules
-        if mi + (-mf) + mel != 0:
+    # trapezoid weights along r (Numba-safe)
+    dr = 0.0 if Nr < 2 else (r[1] - r[0])
+    w  = np.full(Nr, dr, dtype=np.float64)
+    if Nr >= 1:
+        w[0] *= 0.5
+        w[-1] *= 0.5
+
+    # will accumulate the real, positive squared amplitudes
+    Mfi_2 = np.zeros((n_f, n_i), dtype=np.float64)
+
+    # max l present in X_lm
+    le_max = idx_to_lm(X_lm.size - 1)[0]
+
+    for le in range(1, int(le_max) + 1):
+
+        # triangle rule: |lf - li| <= le <= lf + li
+        if le < abs(li - lf) or le > li + lf:
             continue
-        if abs(lf - le) > li or li > lf + le:
+
+        # even-sum rule: lf + le + li must be even
+        if ((lf + le + li) & 1) == 1:
             continue
 
-        X_abs = abs(X_lm[idx])
-        if X_abs <= 1e-05:
-            continue
-
+<<<<<<< HEAD
         pref = (1.0/eps0)*np.sqrt(le/a_nm**3)*X_lm[idx]/(2*le + 1)
         scale = pref / a_nm**(le - 1)
         
@@ -152,6 +172,48 @@ def _transition_M(
         
         # print( AAf.conj() * AAi, np.abs(Mfi_ang)**2, np.abs(Mfi_rad)**2)
     return Mfi
+=======
+       # ---------- Integration along solid angle ---------------------
+        # power in field multipole le: P_le = sum_m |X_{le m}|^2
+        idx0 = lm_to_idx(le, -le)
+        idx1 = lm_to_idx(le,  le) + 1
+        Xl = X_lm[idx0:idx1]
+
+        # Numba-friendly real power sum
+        X_lm_sum = 0.0
+        for x_lm in Xl:
+            X_lm_sum += x_lm.real * x_lm.real + x_lm.imag * x_lm.imag
+
+        if X_lm_sum <= 1e-18:
+            continue
+
+        # angular factor from 3j orthogonality (sum over m_f, m_i)
+        W = Wigner3j(lf, le, li, 0, 0, 0)
+        Mfi_ang2 = ((2.0*lf + 1.0)*(2.0*li + 1.0)*(W*W)*X_lm_sum  # real\ 
+                     / (4.0*np.pi))
+                    
+        # amplitude prefactor, squared (same physics as in _transition_M)
+        # note: this is distinct from the orthogonality 1/(2le+1) that cancelled
+        pref = (1.0/eps0) * np.sqrt(le / (a_nm**3)) / (2*le + 1)
+        scale2 = (pref / (a_nm**(le - 1)))**2  # real
+
+        # radial integrals for each Ef row
+        # build weights r^(le+2)*w once per le
+        rw = np.empty(Nr, dtype=np.float64)
+        for ii in range(Nr):
+            rw[ii] = w[ii] * (r[ii] ** (le + 2))
+
+        # compute weighted B, then a single GEMM for all (f,i):
+        # I = ∫ j_lf(k_f r) j_li(k_i r) r^(le+2) dr → (n_f, n_i)
+        j_li_w = (rw[:, None]) * j_li                  # (Nr, n_i)
+        I   = j_lf.T @ j_li_w                          # (n_f, n_i)
+
+        # accumulate squared integral
+        Mfi_2 += scale2 * Mfi_ang2 * (I * I)        # all real
+
+    # include |Af*Ai|^2
+    return Mfi_2 * AA_abs2
+>>>>>>> e37bdc785d1869a203fddf72a047226f91297efc
 
 @nb.njit(fastmath=False, parallel = False)
 def _M_transition_squared(
@@ -265,12 +327,22 @@ def _hot_e_dist_parallel(
     a_nm: float,
     hv_eV: float,
     E_F: float,
+<<<<<<< HEAD
     tau_e: np.ndarray,
+=======
+    tau_e_ps: float,
+>>>>>>> e37bdc785d1869a203fddf72a047226f91297efc
     e_state: List[QWLevelSet],
     X_lm: np.ndarray,
     Pabs: float
 ) -> Tuple[np.ndarray, np.ndarray]:
 
+<<<<<<< HEAD
+=======
+    volume_nm3 = (4.0 / 3.0) * np.pi * a_nm ** 3
+    gamma_e = hbar / (tau_e_ps*1e3)  # eV
+
+>>>>>>> e37bdc785d1869a203fddf72a047226f91297efc
     # --- flatten bound levels ---------------------------------------------
     lmax = len(e_state)
     l_range = np.zeros(lmax + 1, dtype=np.int64)
@@ -284,7 +356,11 @@ def _hot_e_dist_parallel(
 
     # global transition matrices
     Mfi_2_all = np.zeros((N, N), dtype=np.float64)
+<<<<<<< HEAD
     # Mif_2_all = np.zeros_like(Mfi_2_all)
+=======
+    Mif_2_all = np.zeros_like(Mfi_2_all)
+>>>>>>> e37bdc785d1869a203fddf72a047226f91297efc
 
     # outer parallelism over final l index ----------------------------------
     for lf in prange(lmax):
@@ -296,17 +372,30 @@ def _hot_e_dist_parallel(
 
             # Compute transition matrix for pair (lf, li)
             Mfi_2_block = _M_transition_squared(lf, li, a_nm, X_lm, state_lf, state_li)
+<<<<<<< HEAD
             # Mif_2_block = _M_transition_squared(li, lf, a_nm, X_lm, state_li, state_lf)
 
             # place blocks into global matrices
             Mfi_2_all[lf_s:lf_e, li_s:li_e] = Mfi_2_block
             # Mif_2_all[li_s:li_e, lf_s:lf_e] = Mif_2_block
+=======
+            Mif_2_block = _M_transition_squared(li, lf, a_nm, X_lm, state_li, state_lf)
+            
+            # *** Average over initial m_i ***
+            Mfi_2_block /= (2.0 * li + 1.0)  # initial shell is li
+            Mif_2_block /= (2.0 * lf + 1.0)  # initial shell is lf for the reversed block
+
+            # place blocks into global matrices
+            Mfi_2_all[lf_s:lf_e, li_s:li_e] = Mfi_2_block
+            Mif_2_all[li_s:li_e, lf_s:lf_e] = Mif_2_block
+>>>>>>> e37bdc785d1869a203fddf72a047226f91297efc
 
 # --- Golden‑rule probability matrices ----------------------------------
     EE_i, EE_f = nb_meshgrid(E_all, E_all)
     fd_i = _fermi_dirac(EE_i, E_F)
     fd_f = _fermi_dirac(EE_f, E_F)
 
+<<<<<<< HEAD
     Te = np.zeros((len(tau_e), N), dtype=np.float64)
     Th = np.zeros((len(tau_e), N), dtype=np.float64)
 
@@ -338,6 +427,16 @@ def _hot_e_dist_parallel(
         
         Te[i] = S * Te_raw/Vol
         Th[i] = S * Th_raw/Vol
+=======
+    denom_e = (hv_eV - EE_f + EE_i)**2 + gamma_e**2
+    denom_h = (hv_eV - EE_i + EE_f)**2 + gamma_e**2
+
+    TTe = 4.0/tau_e_ps * fd_i * (1.0 - fd_f) * \
+        (Mfi_2_all/denom_e + Mif_2_all.T/denom_h)
+    
+    TTh = 4.0/tau_e_ps * fd_f * (1.0 - fd_i) * \
+    (Mif_2_all/denom_h + Mfi_2_all.T/denom_e)
+>>>>>>> e37bdc785d1869a203fddf72a047226f91297efc
 
     return Te, Th
 
