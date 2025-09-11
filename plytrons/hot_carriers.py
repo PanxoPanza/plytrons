@@ -341,6 +341,9 @@ def _hot_e_dist_parallel(
 
     Te = np.zeros((len(tau_e), N), dtype=np.float64)
     Th = np.zeros((len(tau_e), N), dtype=np.float64)
+    Te_raw_ = np.zeros((len(tau_e), N), dtype=np.float64)
+    Th_raw_ = np.zeros((len(tau_e), N), dtype=np.float64)
+
 
     for i in range(len(tau_e)):
 
@@ -363,15 +366,18 @@ def _hot_e_dist_parallel(
         Th_raw = TTh.sum(axis=1)
 
         # --- Normalisation -----------------------------------------------------
-        omega = hv_eV / hbar                     # fs^-1   (hv is energy in eV)
-        Vol = 4/3*np.pi*a_nm**3            # Volume of sphere (nm^3)
-        Gamma_e_total = np.sum(Te_raw)*Vol # total electron gen. rate = sum over f (per fs)
-        S = Pabs / (hbar * omega * Gamma_e_total)                 # dimensionless scaling
+
+        Vol = 4/3*np.pi*a_nm**3                # Volume of sphere (nm^3)
+        Gamma_e_total = np.sum(Te_raw)*Vol     # total electron gen. rate = sum over f (per fs)
+        S = Pabs / (hv_eV * Gamma_e_total)     # dimensionless scaling
+    
         
         Te[i] = S * Te_raw/Vol
         Th[i] = S * Th_raw/Vol
+        Te_raw_[i] = Te_raw
+        Th_raw_[i] = Th_raw
 
-    return Te, Th
+    return Te, Th, Te_raw_, Th_raw_
 
 
 # =============================================================================
