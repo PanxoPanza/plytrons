@@ -368,7 +368,7 @@ def _hot_e_dist_parallel(
         # --- Normalisation -----------------------------------------------------
 
         Vol = 4/3*np.pi*a_nm**3                # Volume of sphere (nm^3)
-        Gamma_e_total = np.sum(Te_raw)*Vol     # total electron gen. rate = sum over f (per fs)
+        Gamma_e_total = np.sum(Te_raw)     # total electron gen. rate = sum over f (per fs)
         S = Pabs / (hv_eV * Gamma_e_total)     # dimensionless scaling
     
         

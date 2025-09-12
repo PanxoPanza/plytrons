@@ -1,6 +1,0 @@
-N particles: 3
-sphere1: label=Sphere1, D=5.000 nm, pos=(-3.000, 0.000, 0.000) nm, lmax=10
-sphere2: label=Sphere2, D=5.000 nm, pos=(3.000, 0.000, 0.000) nm, lmax=10
-sphere3: label=Sphere3, D=5.000 nm, pos=(0.000, -5.196, 0.000) nm, lmax=10
-eps_h=1
-E0=1 V/nm, e_hat=[1. 0. 0.], k_hat=[0. 0. 1.]

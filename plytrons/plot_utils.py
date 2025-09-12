@@ -222,8 +222,8 @@ def convert_raw_hot(Te, Th, E, dE_factor):
 def hot_carriers_plot(Te, Th, Te_raw, Th_raw, 
                       e_states, Np, peak, tau_e, D, hv, EF, dE_factor, delta):
 
-    Te = Te
-    Th = Th
+    Te = Te/1000
+    Th = Th/1000
     Te_raw = Te_raw
     Th_raw = Th_raw
 
@@ -245,14 +245,14 @@ def hot_carriers_plot(Te, Th, Te_raw, Th_raw,
 
     # plot
     fig, ax = plt.subplots(figsize=(20, 4.5))
-    ax.fill_between((x - EF)[mask_e], Te_x[mask_e], color='r', alpha=0.38, label='Electrons density')
-    ax.fill_between((x - EF)[mask_h], Th_x[mask_h], color='b', alpha=0.38, label='Holes density')
+    ax.fill_between((x - EF)[mask_e], Te_x[mask_e], color='r', alpha=0.38)
+    ax.fill_between((x - EF)[mask_h], Th_x[mask_h], color='b', alpha=0.38)
 
     # SECOND Y-AXIS for bars
     ax2 = ax.twinx()
     bar_width = 2.0e-2
-    ax2.bar(E_all - EF, Te_raw * to_ps, width=bar_width, color='firebrick', alpha=0.9, label='Discrete electrons')
-    ax2.bar(E_all - EF, Th_raw * to_ps, width=bar_width, color='royalblue', alpha=0.9, label='Discrete holes')
+    ax2.bar(E_all - EF, Te_raw * to_ps, width=bar_width, color='firebrick', alpha=0.9, label='Electrons ')
+    ax2.bar(E_all - EF, Th_raw * to_ps, width=bar_width, color='royalblue', alpha=0.9, label='Holes')
 
     # guides
     ax.axvline(0.0, ls='--', lw=1, color='k', alpha=0.5)
@@ -261,8 +261,8 @@ def hot_carriers_plot(Te, Th, Te_raw, Th_raw,
 
     ax.set_xlim(-delta, delta)
     ax.set_xlabel('Hot carrier energy relative to Fermi level (eV)')
-    ax.set_ylabel(r'Hot carrier density $[\mathrm{eV}^{-1}\,\mathrm{ps}^{-1}\,\mathrm{nm}^{-3}]$')
-    ax2.set_ylabel('Number of discrete hot carrier $\textdelta n$')  # ← label for the bars’ axis
+    ax.set_ylabel(r'Hot carrier generation rate density $[{10}^{-3}\mathrm{eV}^{-1}\,\mathrm{ps}^{-1}\,\mathrm{nm}^{-3}]$')
+    ax2.set_ylabel('hot carrier generation rate per particle $[\mathrm{ps}^{-1}]$')  # ← label for the bars’ axis
 
     # optional: fix independent y-limits
     ax.set_ylim(0, 1.05 * max(Te_x[mask_e].max(initial=0), Th_x[mask_h].max(initial=0)))
@@ -285,8 +285,8 @@ def hot_carrier_dynamics_plot(Te, Th, Te_raw, Th_raw,
     E_all = np.concatenate([es.Eb[es.Eb != 0] for es in e_states]).real
 
     # arrays & sanity
-    Te_arr   = np.asarray(Te,     float)  # (n_tau, N)
-    Th_arr   = np.asarray(Th,     float)
+    Te_arr   = np.asarray(Te,     float)/1000  # (n_tau, N)
+    Th_arr   = np.asarray(Th,     float)/1000
     Te_raw_a = np.asarray(Te_raw, float)
     Th_raw_a = np.asarray(Th_raw, float)
     tau_arr  = np.asarray(tau_e,  float)
@@ -314,8 +314,8 @@ def hot_carrier_dynamics_plot(Te, Th, Te_raw, Th_raw,
 
     # figure & artists
     fig, ax = plt.subplots(figsize=(20, 4.5))
-    line_e, = ax.plot([], [], lw=1.8, color='r', alpha = 0.5, label='Electrons density')
-    line_h, = ax.plot([], [], lw=1.8, color='b', alpha = 0.5, label='Holes density')
+    line_e, = ax.plot([], [], lw=1.8, color='r', alpha = 0.5)
+    line_h, = ax.plot([], [], lw=1.8, color='b', alpha = 0.5)
 
     # will hold the fill_between polygons; start empty
     fill_e = None
@@ -325,9 +325,9 @@ def hot_carrier_dynamics_plot(Te, Th, Te_raw, Th_raw,
     ax2 = ax.twinx()
     x_bar = E_all - EF
     bars_e = ax2.bar(x_bar, np.zeros_like(x_bar), width=bar_width,
-                     color='firebrick', alpha=1, label='Discrete electrons')
+                     color='firebrick', alpha=1, label='Electrons')
     bars_h = ax2.bar(x_bar, np.zeros_like(x_bar), width=bar_width,
-                     color='royalblue',  alpha=1, label='Discrete holes')
+                     color='royalblue',  alpha=1, label='Holes')
 
     # guides
     ax.axvline(0.0, ls='--', lw=1, alpha=0.5)
@@ -339,8 +339,8 @@ def hot_carrier_dynamics_plot(Te, Th, Te_raw, Th_raw,
     ax2.set_ylim(0, YMAX2)
 
     ax.set_xlabel('Hot carrier energy relative to $E_F$ (eV)')
-    ax.set_ylabel(r'Hot carriers per energy $[\mathrm{eV}^{-1}\,\mathrm{ps}^{-1}\,\mathrm{nm}^{-3}]$')
-    ax2.set_ylabel('Discrete hot carriers (scaled)')
+    ax.set_ylabel(r'Hot carrier generation rate density $[{10}^{-3}\mathrm{eV}^{-1}\,\mathrm{ps}^{-1}\,\mathrm{nm}^{-3}]$')
+    ax2.set_ylabel('hot carrier generation rate per particle $[\mathrm{ps}^{-1}]$')  # ← label for the bars’ axis
     ax.grid(True, ls=':')
 
     # merged legend (lines + bars; fills get no legend via '_nolegend_')
